@@ -1,0 +1,294 @@
+#!/bin/sh
+# IOS - proj1
+# Petr Zubalik - xzubal04
+#################################
+
+POSIXLY_CORRECT=yes 
+
+##tmp variable
+option_n=false
+
+regexp="."
+
+##find options with variable
+while getopts :ni: options;do
+		case "$options" in
+        i)	regexp=$OPTARG
+        	;;
+        n)	option_n=true
+            ;;
+        *)	echo "Zadejte prepinace [-i s parametrem],[-n] a [DIR]"
+			
+			;;
+												
+		esac
+done
+
+##when a wrong number of options is set
+if [ $(($# - $OPTIND + 1)) -gt 1 ]; then
+        echo "Zadejte prepinace [-i s parametrem],[-n] a [DIR]"
+        exit 1
+fi
+
+shift $(($OPTIND - 1))
+
+##directory is a current working directory
+directory="."
+
+##if the directory is set
+if [ -d "$*" ];then
+        directory="$*"
+fi
+
+size_directories=$(find -H "$directory" -type d | wc -l )
+size_files=$(find  "$directory" -type f | wc -l)
+
+##number of files with given size
+ltHunB=$(find -H "$directory" -type f -size -100c | wc -l)
+ltKiB=$(find -H "$directory" -type f -size +99c -size -1024c | wc -l)
+ltTenKiB=$(find -H "$directory" -type f -size +1023c -size -10240c | wc -l)
+ltHunKiB=$(find -H "$directory" -type f -size +10239c -size -102400c | wc -l)
+ltMiB=$(find -H "$directory" -type f -size +102399c -size -1048576c | wc -l)
+ltTenMiB=$(find -H "$directory" -type f -size +1048575c -size -10485760c | wc -l)
+ltHunMiB=$(find -H "$directory" -type f -size +10485759c -size -104857600c | wc -l)
+ltGiB=$(find -H "$directory" -type f -size +104857599c -size -1073741824c | wc -l)
+geqGiB=$(find -H "$directory" -type f -size +1073741823c | wc -l)
+
+max_size=$ltHunB
+if [ $max_size -lt $ltKiB ];then
+	max_size=$ltKiB 
+fi
+
+if [ $max_size -lt $ltTenKiB ];then
+	max_size=$ltTenKiB
+fi
+
+if [ $max_size -lt $ltHunKiB ];then
+	max_size=$ltHunKiB
+fi
+
+if [ $max_size -lt $ltMiB ];then
+	max_size=$ltMiB
+fi
+
+if [ $max_size -lt $ltTenMiB ];then
+	max_size=$ltTenMiB
+fi
+
+if [ $max_size -lt $ltHunMiB ];then
+	max_size=$ltHunMiB
+fi
+
+if [ $max_size -lt $ltGiB ];then
+	max_size=$ltGiB
+fi
+
+if [ $max_size -lt $geqGiB ];then
+	max_size=$geqGiB
+fi
+
+
+printer() {
+	count=$1
+	while [ $count -gt 0 ]
+	do
+		printf "#"
+		count=$(($count-1))
+	done
+	printf "\n"
+}
+
+
+#printing of FSHIST
+print_FSHIST() {
+
+	width=0     ## 0 because size cannot be less than 0 viz condition in the loop b$
+ 
+	if [ $option_n = "true" ];then
+		##these constants are for printing "  <100 B  : '" etc.
+	    terminal_width=-13
+	    nonterminal_width=-12                                                          
+		
+    	if [ -t 0 ];then
+	    	width=$(( $(tput cols) + $terminal_width ))
+		else
+        	width=$(( 79+$nonterminal_width ))
+    	fi
+		
+#		koeficient=$(( max_size / width ))
+		## printing of normalized histogram
+		if [ $max_size -gt $width ];then
+			
+			##normalized FSHIST / option -n
+			printf "Root directory: $directory\n"
+	        printf "Directories: $size_directories\n"
+	        printf "All files: $size_files\n"
+	        printf "File size histogram:\n"
+	        printf "%-12s" '  <100 B  : '
+	        printer $(( ltHunB * width / max_size ))
+	        printf "%-12s" '  <1 KiB  : '
+	        printer $(( ltKiB * width / max_size ))
+	        printf "%-12s" '  <10 KiB : '
+	        printer $(( ltTenKiB * width / max_size ))
+	        printf "%-12s" '  <100 KiB: '
+	        printer $(( ltHunKiB * width / max_size ))
+	        printf "%-12s" '  <1 MiB  : '
+	        printer $(( ltMiB * width / max_size ))
+	        printf "%-12s" '  <10 MiB : '
+	        printer $(( ltTenMiB * width / max_size )) 
+	        printf "%-12s" '  <100 MiB: '
+	        printer $(( ltHunMiB * width / max_size ))
+	        printf "%-12s" '  <1 GiB  : '
+	        printer $(( ltGiB * width / max_size ))
+	        printf "%-12s" '  >=1 GiB : '
+			printer $(( geqGiB * width / max_size )) 		
+		
+
+		else
+			printf "Root directory: $directory\n"
+        	printf "Directories: $size_directories\n"
+        	printf "All files: $size_files\n"
+        	printf "File size histogram:\n"
+        	printf "%-12s" '  <100 B  : '
+        	printer $ltHunB
+        	printf "%-12s" '  <1 KiB  : '
+        	printer $ltKiB
+        	printf "%-12s" '  <10 KiB : '
+        	printer $ltTenKiB
+        	printf "%-12s" '  <100 KiB: '
+	        printer $ltHunKiB
+        	printf "%-12s" '  <1 MiB  : '
+        	printer $ltMiB
+        	printf "%-12s" '  <10 MiB : '
+        	printer $ltTenMiB 
+        	printf "%-12s" '  <100 MiB: '
+        	printer $ltHunMiB 
+    	    printf "%-12s" '  <1 GiB  : '
+    	    printer $ltGiB
+    	    printf "%-12s" '  >=1 GiB : '
+	        printer $geqGiB
+
+		fi	 	
+	else
+		printf "Root directory: $directory\n"
+        printf "Directories: $size_directories\n"
+        printf "All files: $size_files\n"
+        printf "File size histogram:\n"
+        printf "%-12s" '  <100 B  : '
+        printer $ltHunB
+        printf "%-12s" '  <1 KiB  : '
+        printer $ltKiB
+        printf "%-12s" '  <10 KiB : '
+        printer $ltTenKiB
+        printf "%-12s" '  <100 KiB: '
+        printer $ltHunKiB
+        printf "%-12s" '  <1 MiB  : '
+        printer $ltMiB
+        printf "%-12s" '  <10 MiB : '
+        printer $ltTenMiB 
+        printf "%-12s" '  <100 MiB: '
+        printer $ltHunMiB 
+        printf "%-12s" '  <1 GiB  : '
+        printer $ltGiB
+        printf "%-12s" '  >=1 GiB : '
+        printer $geqGiB
+fi
+}
+
+print_FTHIST(){
+                                                                                                 
+    FT=$(find "$directory" -type f -print0 | xargs -0 file -b | sort | cut -c1-40 | uniq -c |sort -rn | head -n 10)
+
+	type_count=$(find "$directory" -type f -print0 | xargs -0 file -b | sort | cut -c1-40 | uniq -c |sort -rn | head -n 10 | wc -l)
+
+	
+	limit=10	   
+	if [ $type_count -lt $limit ];then
+		limit=$type_count
+	fi
+	printf "File type histogram:\n"
+
+    if [ $option_n = "true" ];then
+        terminal=-48
+        not_terminal=-47
+     
+        if [ -t 0 ];then
+            width=$(( $(tput cols) + $terminal ))
+        else
+            width=$(( 79 + $not_terminal ))
+        fi
+
+		max_size=$(echo "$FT" | head -n 1 | tail -n 1 | cut -c -5 | xargs)
+
+		if [ $max_size -gt $width ];then
+            j=1
+
+            while [ $j -le $limit ]
+            do
+                count=$(echo "$FT" | head -n $j | tail -n 1 | cut -c -5 | xargs )
+    
+                type=$(echo "$FT" | head -n $j | tail -n 1 | cut -c 6- | xargs )
+    
+                printf "  "
+                printf "%-40s" "$type"
+                if [ ${#type} -ge 40 ]; then
+                    printf "..."
+                else
+                    printf "   "
+                fi
+                printf ": "
+				
+                printer $(( count * width / max_size ))
+                
+                j=$(($j+1))
+            done
+        
+		else
+			k=1
+
+            while [ $k -le $limit ]
+            do
+                count=$(echo "$FT" | head -n $k | tail -n 1 | cut -c -5 | xargs )
+    
+                type=$(echo "$FT" | head -n $k | tail -n 1 | cut -c 6- | xargs )
+    
+                printf "  "
+                printf "%-40s" "$type"
+                if [ ${#type} -ge 40 ]; then
+                    printf "..."
+                else
+                    printf "   "
+                fi
+                printf ": "
+                
+                printer $count                
+                k=$(($k+1))
+            done
+
+		
+		fi
+    else
+        i=1
+        while [ $i -le $limit ]
+        do  
+            count=$(echo "$FT" | head -n $i | tail -n 1 | cut -c -5 | xargs)
+        
+            type=$(echo "$FT" | head -n $i | tail -n 1 | cut -c 6- | xargs )
+        
+            printf "  "
+            printf "%-40s" "$type"
+            if [ ${#type} -ge 40 ];then 
+                printf "..."
+            else
+                printf "   "
+            fi
+            printf ": "
+            printer $count
+    
+            i=$(($i+1))
+		done
+	fi
+}
+
+print_FSHIST
+print_FTHIST
